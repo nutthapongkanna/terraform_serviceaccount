@@ -1,4 +1,4 @@
-project_id = "tlnk-infra-tor"
+project_id = ""
 region     = "asia-southeast1"
 
 # จาก IAM Roles:
