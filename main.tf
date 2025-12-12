@@ -19,7 +19,7 @@ provider "google" {
 resource "google_storage_bucket" "bucket_a" {
   name          = var.bucket_a_name
   location      = var.location
-  force_destroy = true  # ลบ bucket พร้อม object ได้ (สำหรับ lab)
+  force_destroy = true
 }
 
 resource "google_storage_bucket" "bucket_b" {
@@ -49,7 +49,7 @@ locals {
 }
 
 # ==============================
-# 3) แนบ PROJECT ROLES ให้ SA เดียว
+# 3) ผูก PROJECT ROLES ให้ SA นี้
 # ==============================
 
 # Artifact Registry Reader
@@ -111,9 +111,9 @@ resource "google_project_iam_member" "dataproc_custom_worker" {
 # ==============================
 # 4) GCS BUCKET IAM (READ PERMISSIONS)
 #
-#   - SA เดียวนี้:
-#       * อ่านได้: Bucket A + Bucket B
-#       * ห้ามอ่าน: Bucket C (ไม่มี objectViewer ให้)
+#   SA นี้:
+#     - อ่านได้: Bucket A + Bucket B
+#     - ไม่มี objectViewer บน Bucket C
 # ==============================
 
 resource "google_storage_bucket_iam_member" "bucket_a_viewer" {
@@ -129,4 +129,4 @@ resource "google_storage_bucket_iam_member" "bucket_b_viewer" {
 }
 
 # ❗ ไม่มี iam_member สำหรับ bucket C
-# => SA นี้จะไม่มี roles/storage.objectViewer บน bucket C จาก config นี้
+# => SA นี้จะไม่มี roles/storage.objectViewer บน bucket C

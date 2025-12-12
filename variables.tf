@@ -20,7 +20,7 @@ variable "service_account_id" {
 Service account ID (ส่วนหน้า ก่อน @)
 - ตัวเล็ก / ตัวเลข / dash เท่านั้น
 - ไม่เกิน 30 ตัวอักษร
-ตัวอย่าง: "dataproc-customtest"
+ตัวอย่าง: "dataproc-customtest-lab2"
 EOT
   type = string
 }
@@ -28,7 +28,7 @@ EOT
 variable "service_account_display_name" {
   description = "ชื่อแสดงของ Service Account ใน console"
   type        = string
-  default     = "Dataproc / Cloud Run SA"
+  default     = "Dataproc / Cloud Run SA (lab)"
 }
 
 variable "dataproc_custom_worker_id" {
@@ -36,14 +36,14 @@ variable "dataproc_custom_worker_id" {
 ID ของ custom role สำหรับ Dataproc worker (ส่วนท้ายของ role)
 เช่น ถ้า IAM Role แสดงเป็น:
   projects/tlnk-infra-tor/roles/dataproc.customWorker
-ให้ใส่ค่าใน var นี้เป็น: dataproc.customWorker
+ให้ใส่ var นี้เป็น: dataproc.customWorker
 EOT
   type    = string
   default = "dataproc.customWorker"
 }
 
 # ------------------------------
-# ชื่อ GCS Buckets
+# ชื่อ GCS Buckets (ให้ Terraform สร้าง)
 # ------------------------------
 variable "bucket_a_name" {
   description = "ชื่อ Bucket A (ให้อ่านได้)"
@@ -56,6 +56,6 @@ variable "bucket_b_name" {
 }
 
 variable "bucket_c_name" {
-  description = "ชื่อ Bucket C (ไม่ให้ objectViewer)"
+  description = "ชื่อ Bucket C (จะไม่ให้ objectViewer)"
   type        = string
 }
