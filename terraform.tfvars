@@ -1,4 +1,4 @@
-project_id = "tlnk-infra-tor"
+project_id = ""
 region     = "asia-southeast1"
 location   = "asia-southeast1"
 
@@ -7,7 +7,7 @@ service_account_id           = "dataproc-customtest-lab2"
 service_account_display_name = "Dataproc / Cloud Run SA (lab2)"
 
 # จาก IAM:
-# projects/tlnk-infra-tor/roles/dataproc.customWorker
+
 dataproc_custom_worker_id = "dataproc.customWorker"
 
 # Buckets ใหม่ (ไม่ชนของเดิม ch-bucket-a/b/c)
