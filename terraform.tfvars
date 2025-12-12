@@ -1,8 +1,13 @@
-project_id = ""
+project_id = "tlnk-infra-tor"
 region     = "asia-southeast1"
 location   = "asia-southeast1"
 
-# จาก IAM: projects/tlnk-infra-tor/roles/dataproc.customWorker
+# SA เดียวสำหรับ Dataproc / Cloud Run
+service_account_id           = "dataproc-customtest"
+service_account_display_name = "Dataproc / Cloud Run CustomTest SA"
+
+# จาก IAM:
+# projects/tlnk-infra-tor/roles/dataproc.customWorker
 dataproc_custom_worker_id = "dataproc.customWorker"
 
 # ตั้งชื่อ bucket สำหรับ lab นี้

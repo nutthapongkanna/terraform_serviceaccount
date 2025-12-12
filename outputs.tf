@@ -1,6 +1,6 @@
-output "service_account_emails" {
-  description = "อีเมลของ Service Accounts ทั้ง 3 ตัว"
-  value       = local.sa_emails
+output "service_account_email" {
+  description = "อีเมลของ Service Account ที่สร้าง"
+  value       = google_service_account.sa.email
 }
 
 output "bucket_names" {
