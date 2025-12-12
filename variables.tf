@@ -9,6 +9,12 @@ variable "region" {
   default     = "asia-southeast1"
 }
 
+variable "location" {
+  description = "GCS bucket location (เช่น asia-southeast1)"
+  type        = string
+  default     = "asia-southeast1"
+}
+
 variable "dataproc_custom_worker_id" {
   description = <<EOT
 ID ของ custom role สำหรับ Dataproc worker (ส่วนท้ายของ role)
@@ -20,21 +26,18 @@ EOT
   default = "dataproc.customWorker"
 }
 
-# ------------------------------
-# ชื่อ GCS Buckets
-# (ต้องมีอยู่แล้ว หรือจะให้ Terraform ตัวอื่นสร้างก็ได้)
-# ------------------------------
+# ชื่อ bucket (จะถูกใช้ตอนสร้าง + ผูก IAM)
 variable "bucket_a_name" {
-  description = "ชื่อ Bucket A (ที่ให้อ่านได้เฉพาะ SA bucket-a-customtest)"
+  description = "ชื่อ Bucket A"
   type        = string
 }
 
 variable "bucket_b_name" {
-  description = "ชื่อ Bucket B (ที่ให้อ่านได้เฉพาะ SA bucket-b-customtest)"
+  description = "ชื่อ Bucket B"
   type        = string
 }
 
 variable "bucket_c_name" {
-  description = "ชื่อ Bucket C (ไม่มีการผูก objectViewer ให้ SA ใน config นี้)"
+  description = "ชื่อ Bucket C"
   type        = string
 }

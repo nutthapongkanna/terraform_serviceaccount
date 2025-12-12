@@ -1,4 +1,4 @@
-    terraform {
+terraform {
   required_providers {
     google = {
       source  = "hashicorp/google"
@@ -13,8 +13,31 @@ provider "google" {
 }
 
 # ==============================
-# 1) กำหนด service accounts 3 ตัว
+# 1) สร้าง GCS BUCKET A/B/C
 # ==============================
+
+resource "google_storage_bucket" "bucket_a" {
+  name          = var.bucket_a_name
+  location      = var.location
+  force_destroy = true  # ลบ bucket พร้อม object ได้ (สำหรับ lab)
+}
+
+resource "google_storage_bucket" "bucket_b" {
+  name          = var.bucket_b_name
+  location      = var.location
+  force_destroy = true
+}
+
+resource "google_storage_bucket" "bucket_c" {
+  name          = var.bucket_c_name
+  location      = var.location
+  force_destroy = true
+}
+
+# ==============================
+# 2) สร้าง Service Account 3 ตัว
+# ==============================
+
 locals {
   service_accounts = {
     "bucket-a-customtest" = "Bucket A Custom Test SA"
@@ -23,24 +46,20 @@ locals {
   }
 }
 
-# ==============================
-# 2) สร้าง Service Account ทั้ง 3 ตัว
-# ==============================
 resource "google_service_account" "sa" {
   for_each = local.service_accounts
 
   project      = var.project_id
-  account_id   = each.key          # bucket-a-customtest / bucket-b-customtest / bucket-c-customtest
+  account_id   = each.key
   display_name = each.value
 }
 
-# map: key = account_id, value = email
 locals {
   sa_emails = { for k, sa in google_service_account.sa : k => sa.email }
 }
 
 # ==============================
-# 3) ผูก PROJECT ROLES ให้กับ SA ทุกตัว
+# 3) แนบ PROJECT ROLES ให้ SA ทุกตัว
 # ==============================
 
 # Artifact Registry Reader
@@ -118,12 +137,11 @@ resource "google_project_iam_member" "dataproc_custom_worker" {
 # ==============================
 # 4) GCS BUCKET IAM (READ PERMISSIONS)
 #
-#    - bucket-a-customtest → อ่านได้เฉพาะ Bucket A
-#    - bucket-b-customtest → อ่านได้เฉพาะ Bucket B
-#    - bucket-c-customtest → ไม่ได้สิทธิอ่าน (ไม่มี resource ให้)
+#    - SA bucket-a-customtest → อ่านได้เฉพาะ Bucket A
+#    - SA bucket-b-customtest → อ่านได้เฉพาะ Bucket B
+#    - SA bucket-c-customtest → ไม่ได้สิทธิอ่าน bucket ใดเลยจาก config นี้
 # ==============================
 
-# Bucket A: ให้ roles/storage.objectViewer กับ SA bucket-a-customtest เท่านั้น
 resource "google_storage_bucket_iam_member" "bucket_a_viewer" {
   for_each = {
     for k, email in local.sa_emails :
@@ -131,12 +149,11 @@ resource "google_storage_bucket_iam_member" "bucket_a_viewer" {
     if k == "bucket-a-customtest"
   }
 
-  bucket = var.bucket_a_name
+  bucket = google_storage_bucket.bucket_a.name
   role   = "roles/storage.objectViewer"
   member = "serviceAccount:${each.value}"
 }
 
-# Bucket B: ให้ roles/storage.objectViewer กับ SA bucket-b-customtest เท่านั้น
 resource "google_storage_bucket_iam_member" "bucket_b_viewer" {
   for_each = {
     for k, email in local.sa_emails :
@@ -144,11 +161,10 @@ resource "google_storage_bucket_iam_member" "bucket_b_viewer" {
     if k == "bucket-b-customtest"
   }
 
-  bucket = var.bucket_b_name
+  bucket = google_storage_bucket.bucket_b.name
   role   = "roles/storage.objectViewer"
   member = "serviceAccount:${each.value}"
 }
 
-# **ไม่มี resource สำหรับ Bucket C**
-# => ไม่มี SA ตัวไหนได้ roles/storage.objectViewer จาก Terraform ตัวนี้
-#    โดยเฉพาะ bucket-c-customtest จะ "ไม่ควรอ่านได้" ตามที่ต้องการ
+# ❗ ไม่มี resource iam_member สำหรับ bucket C เลย
+#    -> ไม่มี SA ตัวไหนได้ roles/storage.objectViewer บน bucket C จาก config นี้
