@@ -59,3 +59,15 @@ variable "bucket_c_name" {
   description = "ชื่อ Bucket C (จะไม่ให้ objectViewer)"
   type        = string
 }
+
+variable "dp_staging_bucket_name" {
+  description = "Bucket สำหรับ Dataproc staging (--bucket)"
+  type        = string
+  default     = "ch-dp-staging-test-lab2"
+}
+
+variable "dp_temp_bucket_name" {
+  description = "Bucket สำหรับ Dataproc temp (--temp-bucket)"
+  type        = string
+  default     = "ch-dp-temp-test-lab2"
+}

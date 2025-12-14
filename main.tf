@@ -130,3 +130,18 @@ resource "google_storage_bucket_iam_member" "bucket_b_viewer" {
 
 # ❗ ไม่มี iam_member สำหรับ bucket C
 # => SA นี้จะไม่มี roles/storage.objectViewer บน bucket C
+# ==============================
+# 4.1) ให้ SA เป็น Storage Admin บน Dataproc staging/temp buckets
+# ==============================
+
+resource "google_storage_bucket_iam_member" "dp_staging_storage_admin" {
+  bucket = google_storage_bucket.dp_staging.name
+  role   = "roles/storage.admin"
+  member = local.sa_member
+}
+
+resource "google_storage_bucket_iam_member" "dp_temp_storage_admin" {
+  bucket = google_storage_bucket.dp_temp.name
+  role   = "roles/storage.admin"
+  member = local.sa_member
+}
