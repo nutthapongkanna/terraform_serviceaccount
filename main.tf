@@ -121,6 +121,14 @@ resource "google_project_iam_member" "dataproc_custom_worker" {
   member  = local.sa_member
 }
 
+# ✅ (เพิ่มเพื่อตัด WARNING monitoring missing permissions จาก Dataproc)
+# ถ้าอยาก least privilege ค่อยทำ custom role ทีหลัง — lab ใส่ editor ได้เลย
+resource "google_project_iam_member" "monitoring_editor" {
+  project = var.project_id
+  role    = "roles/monitoring.editor"
+  member  = local.sa_member
+}
+
 # ==============================
 # 4) BUCKET IAM
 #   - A,B: objectViewer
@@ -179,19 +187,22 @@ DEST="/opt/test_folder"
 
 echo "== Copy common lib from gs://$BUCKET/$PREFIX -> $DEST =="
 
-mkdir -p "$DEST"
+# ✅ ใช้ sudo ให้ชัวร์ทุก node
+sudo mkdir -p "$DEST"
 gsutil ls "gs://$BUCKET/$PREFIX/" >/dev/null
-gsutil -m rsync -r "gs://$BUCKET/$PREFIX" "$DEST"
 
-# ให้ shell เห็น
-cat <<'EOF' | tee /etc/profile.d/common-lib.sh >/dev/null
+# rsync ลง /opt (ใช้ sudo)
+sudo gsutil -m rsync -r "gs://$BUCKET/$PREFIX" "$DEST"
+
+# profile.d (ต้อง sudo)
+cat <<'EOF' | sudo tee /etc/profile.d/common-lib.sh >/dev/null
 export PYTHONPATH=/opt/test_folder/lib:$PYTHONPATH
 EOF
-chmod +x /etc/profile.d/common-lib.sh
+sudo chmod +x /etc/profile.d/common-lib.sh
 
-# ให้ Spark เห็น (สำคัญสำหรับ pyspark บน worker)
+# spark-env (ต้อง sudo + escape $PYTHONPATH ให้เขียนเป็น literal)
 if [ -f /etc/spark/conf/spark-env.sh ]; then
-  echo "export PYTHONPATH=/opt/test_folder/lib:$PYTHONPATH" >> /etc/spark/conf/spark-env.sh
+  echo "export PYTHONPATH=/opt/test_folder/lib:\$PYTHONPATH" | sudo tee -a /etc/spark/conf/spark-env.sh >/dev/null
 fi
 
 echo "== SUCCESS =="
@@ -271,7 +282,7 @@ resource "google_storage_bucket_object" "job_test_buckets_py" {
 }
 
 # ==============================
-# 8) (Optional แต่แนะนำ) สร้าง sample files ให้เทสได้ทันที
+# 8) sample files
 # ==============================
 
 resource "google_storage_bucket_object" "sample_a" {
