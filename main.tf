@@ -156,7 +156,7 @@ resource "google_storage_bucket_iam_member" "dp_temp_storage_admin" {
 }
 
 # ==============================
-# 5) สร้าง init script (local) แล้ว upload ไป bucket B
+# 5) init-actions script -> upload ไป bucket B
 #    => gs://<bucket_b>/init-actions/setup-common-lib.sh
 # ==============================
 
@@ -164,36 +164,38 @@ resource "local_file" "setup_common_lib" {
   filename        = "${path.module}/setup-common-lib.sh"
   file_permission = "0755"
 
+  # ห้ามใช้ ${DEST}/${BUCKET} ใน script (Terraform จะ interpolate)
+  # ใช้ $DEST/$BUCKET แทน
   content = <<-EOT
-  #!/bin/bash
-  set -euo pipefail
+#!/bin/bash
+set -euo pipefail
 
-  LOG="/var/log/dataproc-setup-common-lib.log"
-  exec > >(tee -a "$LOG") 2>&1
+LOG="/var/log/dataproc-setup-common-lib.log"
+exec > >(tee -a "$LOG") 2>&1
 
-  BUCKET="${var.bucket_b_name}"
-  PREFIX="test_folder"
-  DEST="/opt/test_folder"
+BUCKET="${var.bucket_b_name}"
+PREFIX="test_folder"
+DEST="/opt/test_folder"
 
-  echo "== Copy common lib from gs://${BUCKET}/${PREFIX} -> ${DEST} =="
+echo "== Copy common lib from gs://$BUCKET/$PREFIX -> $DEST =="
 
-  mkdir -p "${DEST}"
-  gsutil ls "gs://${BUCKET}/${PREFIX}/" >/dev/null
-  gsutil -m rsync -r "gs://${BUCKET}/${PREFIX}" "${DEST}"
+mkdir -p "$DEST"
+gsutil ls "gs://$BUCKET/$PREFIX/" >/dev/null
+gsutil -m rsync -r "gs://$BUCKET/$PREFIX" "$DEST"
 
-  # ให้ shell เห็น
-  cat <<EOF | tee /etc/profile.d/common-lib.sh >/dev/null
-  export PYTHONPATH=${DEST}/lib:\\$PYTHONPATH
-  EOF
-  chmod +x /etc/profile.d/common-lib.sh
+# ให้ shell เห็น
+cat <<'EOF' | tee /etc/profile.d/common-lib.sh >/dev/null
+export PYTHONPATH=/opt/test_folder/lib:$PYTHONPATH
+EOF
+chmod +x /etc/profile.d/common-lib.sh
 
-  # ให้ Spark เห็น (สำคัญสำหรับ pyspark บน worker)
-  if [ -f /etc/spark/conf/spark-env.sh ]; then
-    echo "export PYTHONPATH=${DEST}/lib:\\$PYTHONPATH" >> /etc/spark/conf/spark-env.sh
-  fi
+# ให้ Spark เห็น (สำคัญสำหรับ pyspark บน worker)
+if [ -f /etc/spark/conf/spark-env.sh ]; then
+  echo "export PYTHONPATH=/opt/test_folder/lib:$PYTHONPATH" >> /etc/spark/conf/spark-env.sh
+fi
 
-  echo "== SUCCESS =="
-  EOT
+echo "== SUCCESS =="
+EOT
 }
 
 resource "google_storage_bucket_object" "setup_common_lib" {
@@ -215,9 +217,9 @@ resource "local_file" "common_app_py" {
   file_permission = "0644"
 
   content = <<-EOT
-  def hello():
-      return "hello from common lib"
-  EOT
+def hello():
+    return "hello from common lib"
+EOT
 }
 
 resource "google_storage_bucket_object" "common_app_py" {
@@ -227,4 +229,59 @@ resource "google_storage_bucket_object" "common_app_py" {
   content_type = "text/x-python"
 
   depends_on = [google_storage_bucket.bucket_b]
+}
+
+# ==============================
+# 7) สร้าง job file ให้เลยใน bucket B
+#    => gs://<bucket_b>/jobs/job_test_buckets.py
+# ==============================
+
+resource "local_file" "job_test_buckets_py" {
+  filename        = "${path.module}/job_test_buckets.py"
+  file_permission = "0644"
+
+  content = <<-EOT
+from pyspark.sql import SparkSession
+
+spark = SparkSession.builder.appName("test-buckets").getOrCreate()
+
+print("### Trying to read from Bucket A (should SUCCESS)")
+df_a = spark.read.text("gs://${var.bucket_a_name}/sample_a.txt")
+df_a.show(5, truncate=False)
+
+print("### Trying to read from Bucket C (should FAIL)")
+try:
+    df_c = spark.read.text("gs://${var.bucket_c_name}/sample_c.txt")
+    df_c.show(5, truncate=False)
+except Exception as e:
+    print("EXPECTED FAIL reading Bucket C")
+    print(e)
+
+spark.stop()
+EOT
+}
+
+resource "google_storage_bucket_object" "job_test_buckets_py" {
+  bucket       = google_storage_bucket.bucket_b.name
+  name         = "jobs/job_test_buckets.py"
+  source       = local_file.job_test_buckets_py.filename
+  content_type = "text/x-python"
+
+  depends_on = [google_storage_bucket.bucket_b]
+}
+
+# ==============================
+# 8) (Optional แต่แนะนำ) สร้าง sample files ให้เทสได้ทันที
+# ==============================
+
+resource "google_storage_bucket_object" "sample_a" {
+  bucket  = google_storage_bucket.bucket_a.name
+  name    = "sample_a.txt"
+  content = "hello from bucket A\n"
+}
+
+resource "google_storage_bucket_object" "sample_c" {
+  bucket  = google_storage_bucket.bucket_c.name
+  name    = "sample_c.txt"
+  content = "hello from bucket C\n"
 }
